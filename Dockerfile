@@ -1,4 +1,4 @@
-ARG KASM_BASE_TAG=1.17.0
+ARG KASM_BASE_TAG=1.16.1-rolling-weekly
 FROM kasmweb/core-ubuntu-focal:${KASM_BASE_TAG}
 
 # Re-declare after FROM (ARGs before FROM don't survive into the build stage)
@@ -6,31 +6,24 @@ ARG ANKI_VERSION=26.08.1
 
 USER root
 
-# --- Anki runtime dependencies ---
-# zstd is needed to unpack Anki's .tar.zst release archive.
-# The rest are what Anki's own install docs list as required on Debian/Ubuntu
-# as of the 26.x "Briefcase" packaging (docs.ankiweb.net/platform/linux/installing.html).
+# --- Anki install-time dependency ---
+# install.sh (bundled inside Anki's own tarball) installs Anki's runtime/Qt
+# dependencies itself via apt-get, and also calls `xdg-mime` partway through
+# (from the xdg-utils package). Everything below runs in one layer so the
+# apt package index stays valid for install.sh's own internal `apt-get
+# install` call - it's only cleaned up at the very end.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    wget \
-    zstd \
-    ca-certificates \
-    libxcb-xinerama0 \
-    libxcb-cursor0 \
-    libnss3 \
-    libxcb-icccm4 \
-    libxcb-keysyms1 \
- && rm -rf /var/lib/apt/lists/*
-
-# --- Install Anki ---
-# Since 26.05, Anki's Linux tarball is named anki-<version>-linux-x86_64.tar.zst
-# and always extracts to a folder called "anki-linux" (not a versioned folder name).
-RUN wget -q "https://github.com/ankitects/anki/releases/download/${ANKI_VERSION}/anki-${ANKI_VERSION}-linux-x86_64.tar.zst" \
+      wget \
+      zstd \
+      ca-certificates \
+      xdg-utils \
+ && wget -q "https://github.com/ankitects/anki/releases/download/${ANKI_VERSION}/anki-${ANKI_VERSION}-linux-x86_64.tar.zst" \
       -O /tmp/anki.tar.zst \
  && tar --use-compress-program=unzstd -xf /tmp/anki.tar.zst -C /tmp \
  && cd /tmp/anki-linux \
  && ./install.sh \
  && cd / \
- && rm -rf /tmp/anki*
+ && rm -rf /tmp/anki* /var/lib/apt/lists/*
 
 # --- Desktop launcher icon ---
 COPY anki.desktop /home/kasm-user/Desktop/anki.desktop

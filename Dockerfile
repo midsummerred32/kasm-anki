@@ -6,31 +6,28 @@ ARG ANKI_VERSION=26.08.1
 
 USER root
 
-# --- Anki runtime + Qt6 dependencies ---
+# --- Anki runtime dependencies ---
 # zstd is needed to unpack Anki's .tar.zst release archive.
-# The rest are the shared libraries Anki's bundled Qt6 GUI needs to run headless-in-container.
+# The rest are what Anki's own install docs list as required on Debian/Ubuntu
+# as of the 26.x "Briefcase" packaging (docs.ankiweb.net/platform/linux/installing.html).
 RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     zstd \
     ca-certificates \
+    libxcb-xinerama0 \
+    libxcb-cursor0 \
     libnss3 \
-    libxcomposite1 \
-    libxcursor1 \
-    libxdamage1 \
-    libxi6 \
-    libxrandr2 \
-    libxtst6 \
-    libasound2 \
-    libgbm1 \
-    libxkbcommon0 \
-    fonts-noto-color-emoji \
+    libxcb-icccm4 \
+    libxcb-keysyms1 \
  && rm -rf /var/lib/apt/lists/*
 
 # --- Install Anki ---
-RUN wget -q "https://github.com/ankitects/anki/releases/download/${ANKI_VERSION}/anki-${ANKI_VERSION}-linux-qt6.tar.zst" \
+# Since 26.05, Anki's Linux tarball is named anki-<version>-linux-x86_64.tar.zst
+# and always extracts to a folder called "anki-linux" (not a versioned folder name).
+RUN wget -q "https://github.com/ankitects/anki/releases/download/${ANKI_VERSION}/anki-${ANKI_VERSION}-linux-x86_64.tar.zst" \
       -O /tmp/anki.tar.zst \
  && tar --use-compress-program=unzstd -xf /tmp/anki.tar.zst -C /tmp \
- && cd /tmp/anki-${ANKI_VERSION}-linux-qt6 \
+ && cd /tmp/anki-linux \
  && ./install.sh \
  && cd / \
  && rm -rf /tmp/anki*

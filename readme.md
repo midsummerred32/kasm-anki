@@ -45,10 +45,13 @@ If your GHCR package is private, add a registry credential in
 
 ## Notes / things to double check periodically
 
-- Anki occasionally changes its release asset naming (e.g. switching Qt5 →
-  Qt6, or adding new build variants). If a build ever fails after a bump,
-  check the [Anki releases page](https://github.com/ankitects/anki/releases)
-  for the current asset name and adjust the `wget` URL in the `Dockerfile`.
+- Anki occasionally changes its release asset naming and packaging (it moved
+  from `anki-<version>-linux-qt6.tar.zst` to `anki-<version>-linux-x86_64.tar.zst`
+  as of the 26.05 "Briefcase" repackaging, for example). If a build ever fails
+  after a version bump, check the current instructions at
+  [docs.ankiweb.net/platform/linux/installing.html](https://docs.ankiweb.net/platform/linux/installing.html)
+  and adjust the `wget` URL / extracted folder name / dependency list in the
+  `Dockerfile` to match.
 - For Anki data (collection, sync login, add-ons) to persist across sessions,
   configure a persistent profile / persistent home directory for this image in
   Kasm — otherwise everything resets when the container is destroyed.

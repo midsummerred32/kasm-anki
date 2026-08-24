@@ -25,6 +25,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       wget \
       zstd \
       ca-certificates \
+     libxcb-cursor0 \
       xdg-utils \
  && wget -q "https://github.com/ankitects/anki/releases/download/${ANKI_VERSION}/anki-${ANKI_VERSION}-linux-x86_64.tar.zst" \
       -O /tmp/anki.tar.zst \

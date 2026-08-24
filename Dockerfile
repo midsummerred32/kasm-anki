@@ -1,5 +1,5 @@
 ARG KASM_BASE_TAG=1.16.1-rolling-weekly
-FROM kasmweb/core-ubuntu-jammy:${KASM_BASE_TAG}
+FROM kasmweb/core-ubuntu-noble:${KASM_BASE_TAG}
 
 # Re-declare after FROM (ARGs before FROM don't survive into the build stage)
 ARG ANKI_VERSION=26.08.1

@@ -1,0 +1,86 @@
+name: Check for Anki / Kasm updates
+
+on:
+  schedule:
+    # Every day at 06:00 UTC
+    - cron: "0 6 * * *"
+  workflow_dispatch: {}   # lets you trigger it manually from the Actions tab
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  check-versions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Read current pinned versions
+        id: current
+        run: |
+          source versions.env
+          echo "anki=$ANKI_VERSION" >> "$GITHUB_OUTPUT"
+          echo "kasm=$KASM_BASE_TAG" >> "$GITHUB_OUTPUT"
+
+      - name: Get latest Anki release
+        id: anki
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          latest=$(gh api repos/ankitects/anki/releases/latest --jq '.tag_name')
+          echo "version=$latest" >> "$GITHUB_OUTPUT"
+
+      - name: Get latest Kasm core-ubuntu-focal tag
+        id: kasm
+        run: |
+          # Docker Hub tags API - pull all pages, keep only "clean" semver tags
+          # (skip -rolling, -daily, latest, etc).
+          latest=$(curl -s "https://hub.docker.com/v2/repositories/kasmweb/core-ubuntu-focal/tags?page_size=100" \
+            | jq -r '.results[].name' \
+            | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' \
+            | sort -V \
+            | tail -n1)
+          echo "version=$latest" >> "$GITHUB_OUTPUT"
+
+      - name: Compare and update versions.env
+        id: diff
+        run: |
+          changed=false
+
+          if [ "${{ steps.anki.outputs.version }}" != "${{ steps.current.outputs.anki }}" ] && \
+             [ -n "${{ steps.anki.outputs.version }}" ]; then
+            sed -i "s/^ANKI_VERSION=.*/ANKI_VERSION=${{ steps.anki.outputs.version }}/" versions.env
+            changed=true
+          fi
+
+          if [ "${{ steps.kasm.outputs.version }}" != "${{ steps.current.outputs.kasm }}" ] && \
+             [ -n "${{ steps.kasm.outputs.version }}" ]; then
+            sed -i "s/^KASM_BASE_TAG=.*/KASM_BASE_TAG=${{ steps.kasm.outputs.version }}/" versions.env
+            changed=true
+          fi
+
+          echo "changed=$changed" >> "$GITHUB_OUTPUT"
+
+      - name: Open pull request
+        if: steps.diff.outputs.changed == 'true'
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          commit-message: "chore: bump Anki/Kasm versions"
+          branch: bot/version-bump
+          delete-branch: true
+          title: "Bump versions - Anki ${{ steps.anki.outputs.version }} / Kasm ${{ steps.kasm.outputs.version }}"
+          body: |
+            Automated version check found updates:
+
+            | Package | Old | New |
+            |---|---|---|
+            | Anki | ${{ steps.current.outputs.anki }} | ${{ steps.anki.outputs.version }} |
+            | Kasm core-ubuntu-focal | ${{ steps.current.outputs.kasm }} | ${{ steps.kasm.outputs.version }} |
+
+            Merging this will trigger the image build/push workflow.
+          labels: |
+            dependencies
+            automated

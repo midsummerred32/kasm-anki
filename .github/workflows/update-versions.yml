@@ -35,14 +35,18 @@ jobs:
       - name: Get latest Kasm core-ubuntu-focal tag
         id: kasm
         run: |
-          # Docker Hub tags API - pull all pages, keep only "clean" semver tags
-          # (skip -rolling, -daily, latest, etc).
+          # kasmweb/core-ubuntu-focal only publishes rolling tags (e.g.
+          # 1.16.1-rolling-weekly) - there's no plain "1.17.0" style tag for
+          # this repo. We track the -rolling-weekly line for stability;
+          # switch the grep pattern to -rolling-daily if you want the more
+          # frequently updated line instead.
           latest=$(curl -s "https://hub.docker.com/v2/repositories/kasmweb/core-ubuntu-focal/tags?page_size=100" \
             | jq -r '.results[].name' \
-            | grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' \
+            | grep -E '^[0-9]+\.[0-9]+\.[0-9]+-rolling-weekly$' \
+            | sed -E 's/-rolling-weekly$//' \
             | sort -V \
             | tail -n1)
-          echo "version=$latest" >> "$GITHUB_OUTPUT"
+          echo "version=${latest}-rolling-weekly" >> "$GITHUB_OUTPUT"
 
       - name: Compare and update versions.env
         id: diff

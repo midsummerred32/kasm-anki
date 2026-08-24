@@ -6,6 +6,15 @@ ARG ANKI_VERSION=26.08.1
 
 USER root
 
+# Kasm's own convention (see kasm.com/docs/latest/how_to/building_images.html):
+# customizations are written into a seed profile directory, kasm-default-profile,
+# which Kasm copies into the real session home (kasm-user) at container start.
+# Writing straight to /home/kasm-user during the build gets ignored/overwritten,
+# which is why the desktop icon didn't show up before.
+ENV HOME=/home/kasm-default-profile
+ENV STARTUPDIR=/dockerstartup
+WORKDIR $HOME
+
 # --- Anki install-time dependency ---
 # install.sh (bundled inside Anki's own tarball) installs Anki's runtime/Qt
 # dependencies itself via apt-get, and also calls `xdg-mime` partway through
@@ -26,11 +35,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
  && rm -rf /tmp/anki* /var/lib/apt/lists/*
 
 # --- Desktop launcher icon ---
-COPY anki.desktop /home/kasm-user/Desktop/anki.desktop
-RUN chmod +x /home/kasm-user/Desktop/anki.desktop \
- && chown kasm-user:kasm-user /home/kasm-user/Desktop/anki.desktop
+# install.sh drops a .desktop file into /usr/share/applications itself
+# (this is what gives Anki its app-menu entry); we copy that same file onto
+# the seed profile's Desktop so it also shows as a desktop icon.
+RUN cp /usr/local/share/applications/anki.desktop $HOME/Desktop/anki.desktop \
+ && chmod +x $HOME/Desktop/anki.desktop \
+ && chown 1000:0 $HOME/Desktop/anki.desktop
 
-USER kasm-user
+# --- Auto-launch Anki when the session starts ---
+# custom_startup.sh is Kasm's hook for this; desktop_ready blocks until the
+# XFCE desktop has finished loading so Anki doesn't try to open too early.
+RUN echo '/usr/bin/desktop_ready && anki &' > $STARTUPDIR/custom_startup.sh \
+ && chmod +x $STARTUPDIR/custom_startup.sh
+
+# Match ownership convention used by the core image (uid 1000, gid 0)
+RUN chown -R 1000:0 $HOME
+
+USER 1000
 
 # Record what's inside this image for easy debugging (docker inspect --format).
 LABEL anki.version="${ANKI_VERSION}" \

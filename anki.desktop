@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Anki
+Comment=Anki Flashcards
+Exec=anki
+Icon=anki
+Terminal=false
+Type=Application
+Categories=Education;

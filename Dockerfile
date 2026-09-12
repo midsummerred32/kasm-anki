@@ -25,14 +25,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
       wget \
       zstd \
       ca-certificates \
+      libxcb-cursor0 \
+      libxcb-image0 \
+      libxcb-icccm4 \
+      libxcb-render-util0 \
+      libxcb-shape0 \
+      libxcb-xrm0 \
+      libxcb1 \
+      libgl1-mesa-dri \
+      libglx-mesa0 \
       xdg-utils \
- && wget -q "https://github.com/ankitects/anki/releases/download/${ANKI_VERSION}/anki-${ANKI_VERSION}-linux-x86_64.tar.zst" \
+  && wget -q "https://github.com/ankitects/anki/releases/download/${ANKI_VERSION}/anki-${ANKI_VERSION}-linux-x86_64.tar.zst" \
       -O /tmp/anki.tar.zst \
- && tar --use-compress-program=unzstd -xf /tmp/anki.tar.zst -C /tmp \
- && cd /tmp/anki-linux \
- && ./install.sh \
- && cd / \
- && rm -rf /tmp/anki* /var/lib/apt/lists/*
+  && tar --use-compress-program=unzstd -xf /tmp/anki.tar.zst -C /tmp \
+  && cd /tmp/anki-linux \
+  && export QT_QPA_PLATFORM=offscreen && ./install.sh 2>&1 | tail -50 \
+  && cd / \
+  && rm -rf /tmp/anki* /var/lib/apt/lists/*
 
 # --- Desktop launcher icon ---
 # install.sh drops a .desktop file into /usr/share/applications itself
